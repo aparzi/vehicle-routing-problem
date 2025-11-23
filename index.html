@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>VRP Demo</title>
+  <style>
+    body {
+      font-family: 'Courier New', Courier, monospace;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      background: #0a0a0a;
+      color: #0f0;
+      margin: 0;
+      padding: 20px;
+    }
+    h2 {
+      text-shadow: 0 0 5px #0f0;
+    }
+    #controls {
+      margin-bottom: 20px;
+    }
+    button {
+      padding: 10px 15px;
+      margin: 0 5px;
+      cursor: pointer;
+      border: 1px solid #0f0;
+      border-radius: 6px;
+      background: #1a1a1a;
+      color: #0f0;
+      font-size: 14px;
+      box-shadow: 0 0 5px #0f0;
+      transition: all 0.3s ease;
+    }
+    button:hover {
+      background: #0f0;
+      color: #0a0a0a;
+      box-shadow: 0 0 15px #0f0;
+    }
+    canvas {
+      background: #1a1a1a;
+      border: 1px solid #0f0;
+      box-shadow: 0 0 10px #0f0;
+    }
+    #cost {
+      font-size: 18px;
+      font-weight: bold;
+      text-shadow: 0 0 5px #0f0;
+    }
+  </style>
+</head>
+<body>
+  <h2>Vehicle Routing Problem Demo</h2>
+
+  <div id="controls">
+    <button onclick="initVRP()">Reset</button>
+    <button onclick="runGreedy()">Greedy</button>
+    <button onclick="runTwoOpt()">2-Opt Optimize</button>
+  </div>
+
+  <canvas id="vrpCanvas" width="700" height="700"></canvas>
+
+  <p id="cost" style="font-size:18px; font-weight:bold;"></p>
+
+  <script type="module">
+    import { VRP } from './vrp.js';
+    import { greedyInsertion, optimizeAllRoutesAnimated } from './heuristics.js';
+    import { routeLength } from './utils.js';
+
+    let vrp = null;
+    const canvas = document.getElementById('vrpCanvas');
+    const ctx = canvas.getContext('2d');
+
+    function drawVRP() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      // draw depot
+      ctx.fillStyle = 'red';
+      ctx.beginPath();
+      ctx.arc(vrp.depot.x, vrp.depot.y, 7, 0, 2 * Math.PI);
+      ctx.fill();
+
+      // draw customers
+      ctx.fillStyle = 'black';
+      vrp.customers.forEach(c => {
+        ctx.beginPath();
+        ctx.arc(c.x, c.y, 5, 0, 2 * Math.PI);
+        ctx.fill();
+      });
+
+      // draw routes
+      const colors = ['#0f0', '#0ff', '#0f7', '#07f', '#7f0'];
+
+      vrp.routes.forEach((route, v) => {
+        ctx.strokeStyle = colors[v % colors.length];
+        ctx.lineWidth = 2;
+
+        ctx.beginPath();
+        ctx.moveTo(vrp.depot.x, vrp.depot.y);
+
+        route.forEach(c => {
+          ctx.lineTo(c.x, c.y);
+        });
+
+        ctx.lineTo(vrp.depot.x, vrp.depot.y);
+        ctx.stroke();
+      });
+
+        let total = 0;
+        vrp.routes.forEach(r => total += routeLength(r, vrp.depot));
+        document.getElementById("cost").innerText =
+            "Costo totale: " + total.toFixed(2);
+    }
+
+    window.initVRP = function() {
+      vrp = new VRP(25, 3, canvas.width, canvas.height);
+      drawVRP();
+    }
+
+    window.runGreedy = function() {
+      greedyInsertion(vrp);
+      drawVRP();
+    }
+
+    window.runTwoOpt = async function () {
+        const anyImprovement = await optimizeAllRoutesAnimated(vrp, drawVRP, 500);
+        drawVRP();
+        if (!anyImprovement) {
+            alert("Nessun ulteriore miglioramento possibile con 2-Opt!");
+        }
+    }
+
+    initVRP();
+  </script>
+</body>
+</html>
